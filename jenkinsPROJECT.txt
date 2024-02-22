@@ -1,0 +1,33 @@
+node {
+        stage('Clone repo') {
+            git branch: 'main', credentialsId: 'github-credentials', url: 'https://github.com/awspritamshendge/maven-web-app.git'
+            
+                            }
+        stage ('Maven Clean Build'){
+        def mavenHome = tool name: "Maven", type: "maven"
+        def mavenCMD = "${mavenHome}/bin/mvn"
+        sh "${mavenCMD} clean package"
+                                   }
+        stage('code review') {
+			withSonarQubeEnv('Sonar-server-10.3') {
+			def mavenHome = tool name: "Maven", type: "maven"
+			def mavenCMD = "${mavenHome}/bin/mvn"
+			sh "${mavenCMD} sonar:sonar"
+    	                                         }
+                                    }  
+        stage('upload build artifact ') {
+            nexusArtifactUploader artifacts: [[artifactId: '01-maven-web-app', classifier: '', file: 'target/maven-web-app.war', type: 'war']], credentialsId: 'nexus-credentials', groupId: 'in.ashokit', nexusUrl: '3.6.39.123:8081/', nexusVersion: 'nexus3', protocol: 'http', repository: 'ashokit-Snapshot-repo', version: '1.0-SNAPSHOT'
+        }
+        
+        stage('Deploy'){
+            sshagent(['tomcat-server-file-credentials']) {
+                sh 'scp -o StrictHostKeyChecking=no target/maven-web-app.war ec2-user@15.206.80.182:/home/ec2-user/apache-tomcat-9.0.85/webapps'
+                                                         }
+                       }
+}
+
+
+
+
+
+
